@@ -1,4 +1,4 @@
-import {createEvent, createStore, sample} from "effector";
+import {createEffect, createEvent, createStore, sample} from "effector";
 import {ITodo} from "./dto/todo";
 import React from "react";
 
@@ -19,7 +19,11 @@ const initialState: ITodo[] = [
         completed: true
     }
 ];
-
+export const getPostFX = createEffect( async () => {
+    const res = await fetch('https://jsonplaceholder.typicode.com/posts?_limit=4');
+    return await res.json();
+});
+export const getData = createEvent<React.SyntheticEvent>();
 export const componentMounted = createEvent();
 export const componentUnmounted = createEvent();
 export const toggleStatus = createEvent<number>();
@@ -28,7 +32,11 @@ export const insert = createEvent<string>();
 export const change = createEvent<string>();
 export const clear = createEvent<React.SyntheticEvent>();
 export const submit = createEvent<React.SyntheticEvent>();
-//
+
+export const $isComponentMount = createStore<boolean>(false)
+    .on(componentMounted, () => true)
+    .reset(componentUnmounted);
+
 export const $input = createStore<string>('')
     .on(change, (_, value) => value)
     .reset(insert, clear);
@@ -40,10 +48,13 @@ sample({
     source: $input,
     target: insert
 })
-export const $isComponentMount = createStore<boolean>(false)
-    .on(componentMounted, () => true)
-    .reset(componentUnmounted);
+sample({
+    clock: getData,
+    target: getPostFX
+});
+
 export const $todos = createStore<ITodo[]>(initialState)
+    .on(getPostFX.doneData, (_, payload) => payload)
     .on(insert, (state, payload) => {
         const formData = {
             userId: 1,
